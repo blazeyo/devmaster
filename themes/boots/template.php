@@ -91,7 +91,9 @@ function boots_preprocess_environment(&$vars)
   $items[] = l('<i class="fa fa-list"></i> ' . t('Task Logs'), "node/$project->nid/logs/$environment->name", array(
       'html' => TRUE,
       'attributes' => array(
-          'class' => 'list-group-item',
+          'class' => array(
+            'list-group-item',
+          ),
       ),
   ));
 
@@ -203,7 +205,9 @@ function boots_render_tasks($tasks = NULL, $class = '', $actions = array(), $flo
   $task_items[] = l($text, $url, array(
     'html' => TRUE,
     'attributes' => array(
-      'class' => 'list-group-item',
+      'class' => array(
+        'list-group-item',
+      ),
     ),
   ));
 
@@ -246,11 +250,12 @@ function boots_render_tasks($tasks = NULL, $class = '', $actions = array(), $flo
       $text .= $task->title;
       $text .= ' <small class="task-ago btn-block">' . format_interval(time() - $task->changed) .' '. t('ago') . '</small>';
 
+      $id = isset($task_node->environment)? "task-{$task_node->environment->project_name}-{$task_node->environment->name}": "task-";
       $task_items[] = l($text, 'node/' . $task->nid, array(
         'html' => TRUE,
         'attributes' => array(
-          'class' => 'list-group-item ' . $item_class,
-            'id' => "task-{$task_node->environment->project_name}-{$task_node->environment->name}",
+          'class' => array('list-group-item ' . $item_class),
+            'id' => $id,
         ),
       ));
     }
@@ -260,14 +265,14 @@ function boots_render_tasks($tasks = NULL, $class = '', $actions = array(), $flo
   }
 
   $items[] = array(
-    'class' => 'tasks',
+    'class' => array('tasks'),
     'data' => '<div class="list-group">' . implode("\n", $task_items) . '</div>',
   );
 
   if (!empty($actions)) {
 
     array_unshift($items, array(
-      'class' => 'divider',
+      'class' => array('divider'),
     ));
 
     // Add "Environment Settings" link
@@ -279,7 +284,7 @@ function boots_render_tasks($tasks = NULL, $class = '', $actions = array(), $flo
     foreach ($actions as $link) {
       $action_items[] = l($link['title'], $link['href'], array(
         'attributes' => array(
-          'class' => 'list-group-item',
+          'class' => array('list-group-item'),
         ),
         'query' => array(
           'token' => drupal_get_token($user->uid),
@@ -288,12 +293,21 @@ function boots_render_tasks($tasks = NULL, $class = '', $actions = array(), $flo
     }
 
     $items[] = array(
-      'class' => 'actions',
+      'class' => array('actions'),
       'data' => '<div class="list-group">' . implode("\n", $action_items) . '</div>',
     );
   }
 
-  $tasks = theme('item_list', $items, '', 'ul', array('class' => 'devshop-tasks dropdown-menu dropdown-menu-' . $float, 'role' => 'menu'));
+  $tasks = theme('item_list', array(
+    'items' => $items,
+    'attributes' => array(
+      'class' => array(
+        'devshop-tasks dropdown-menu dropdown-menu-' . $float,
+        )
+      ),
+      'role' => 'menu',
+    )
+  );
 
   if ($tasks_count == 0) {
     $tasks_count = '';
@@ -480,7 +494,7 @@ function boots_preprocess_node_project(&$vars){
     if ($node->verify->task_status == HOSTING_TASK_ERROR) {
       $vars['deploy_label'] = t('There was a problem refreshing branches and tags.');
       $vars['git_refs'][] = l(t('View task log'), 'node/' . $node->verify->nid);
-      $vars['git_refs'][] = l(t('Refresh branches'), 'node/' . $node->nid . '/project_verify', array('attributes' => array('class' => 'refresh-link'), 'query' => array('token' => drupal_get_token($user->uid))));
+      $vars['git_refs'][] = l(t('Refresh branches'), 'node/' . $node->nid . '/project_verify', array('attributes' => array('class' => array('refresh-link')), 'query' => array('token' => drupal_get_token($user->uid))));
     }
     elseif ($node->verify->task_status == HOSTING_TASK_QUEUED || $node->verify->task_status == HOSTING_TASK_PROCESSING) {
       $vars['deploy_label'] =  t('Branches refreshing.  Please wait.');
@@ -562,7 +576,7 @@ function boots_preprocess_node_project(&$vars){
     else {
       $github_button_text = t('Manage Webhooks at GitHub.com');
     }
-    $button = l($github_button_text, $vars['add_webhook_url'], array('attributes'=> array('class' => 'btn btn-primary', 'target' => '_blank')));
+    $button = l($github_button_text, $vars['add_webhook_url'], array('attributes'=> array('class' => array('btn btn-primary'), 'target' => '_blank')));
   }
   else {
     $suffix = t('Ping this URL after each code push to keep the servers up to date.');

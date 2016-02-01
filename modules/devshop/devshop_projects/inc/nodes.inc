@@ -137,7 +137,7 @@ function devshop_projects_node_load($nodes, $types) {
       $node->type_name = $task_types[$node->task_type]['title'];
 
       // If platform's first verify...
-      if ($node->ref->type == 'platform' && $node->ref->verified == 0) {
+      if (isset($node->ref) && $node->ref->type == 'platform' && $node->ref->verified == 0) {
         $node->type_name = t('Cloning Codebase');
       }
 
@@ -145,7 +145,31 @@ function devshop_projects_node_load($nodes, $types) {
       $node->icon = devshop_task_status_icon($node->task_status);
 
       // Get desired URL
-      $nosnt = $project_node->project->environments[$result->name];
+      $node->url = url("node/{$node->nid}");
+
+      // @TODO: Doesn't quite work. we need a different VID for each clone link.
+      //  if ($node->task_type == 'clone') {
+      //    $additions['url'] = url("node/{$node->nid}/revisions/{$node->vid}/view");
+      //  }
+
+      //Load the project and environment info for this task.
+      $results = (object) db_query("
+        SELECT
+          title as project,
+          e.*
+        FROM {hosting_devshop_project_environment} e
+          LEFT JOIN {hosting_devshop_project} p ON e.project_nid = p.nid
+          LEFT JOIN {node} n ON p.nid = n.nid
+          WHERE site = :site OR platform = :platform
+
+", array(
+        ':site' => $node->rid,
+        ':platform' => $node->rid
+      ))->fetchAssoc();
+
+      $node->project = $results->project;
+      $node->environment = $results;
+      $node->environment->settings = $results->settings;
     }
     // Projects
     elseif ($node->type == 'project') {
@@ -302,7 +326,13 @@ function devshop_projects_node_load($nodes, $types) {
         // Environment Drupal version.
         $iid = db_query("SELECT iid FROM {hosting_package_instance} i left join {hosting_package} p on p.nid=i.package_id WHERE p.package_type = :type AND i.rid = :nid", array(':type' => 'platform', ':nid' => $environment->platform))->fetchField();
         $release = hosting_package_instance_load($iid);
-        $environment->version = $release->version;
+
+        if (isset($release->version)) {
+          $environment->version = $release->version;
+        }
+        else {
+          $environment->version = t('unknown');
+        }
 
         // @TODO: Make "servers" more abstract so we can add many more.
         // HTTP Server
@@ -336,7 +366,7 @@ function devshop_projects_node_load($nodes, $types) {
 
         // Last commit
         $path = $project->code_path . '/' . $environment->name;
-        if (file_exists($path)) {
+        if (file_exists($path . '/.git')) {
           $environment->git_ref_id = shell_exec("cd $path; git log --pretty=format:'%ar' --max-count=1
       ");
           $environment->git_last = shell_exec("cd $path; git log --pretty=format:'%h %an %ar %s' --max-count=1");
@@ -384,7 +414,7 @@ function devshop_projects_node_load($nodes, $types) {
     }
 
     // Put live environment at the top.
-    if (!empty($environments) && $project->settings->live['live_environment']) {
+    if (!empty($environments) && isset($project->settings->live) && $project->settings->live['live_environment']) {
       $project->environments = array();
       $live_env = $project->settings->live['live_environment'];
       $project->environments[$live_env] = $environments[$live_env];
